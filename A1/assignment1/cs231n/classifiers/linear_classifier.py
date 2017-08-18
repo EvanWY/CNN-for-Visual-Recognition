@@ -38,8 +38,6 @@ class LinearClassifier(object):
       X_batch = None
       y_batch = None
 
-      #########################################################################
-      # TODO:                                                                 #
       # Sample batch_size elements from the training data and their           #
       # corresponding labels to use in this round of gradient descent.        #
       # Store the data in X_batch and their corresponding labels in           #
@@ -48,25 +46,18 @@ class LinearClassifier(object):
       #                                                                       #
       # Hint: Use np.random.choice to generate indices. Sampling with         #
       # replacement is faster than sampling without replacement.              #
-      #########################################################################
-      pass
-      #########################################################################
-      #                       END OF YOUR CODE                                #
-      #########################################################################
+      batch_idxs = np.random.choice(X.shape[0], batch_size)
+      X_batch = X[batch_idxs]
+      y_batch = y[batch_idxs]
 
       # evaluate loss and gradient
       loss, grad = self.loss(X_batch, y_batch, reg)
       loss_history.append(loss)
 
       # perform parameter update
-      #########################################################################
-      # TODO:                                                                 #
+      
       # Update the weights using the gradient and the learning rate.          #
-      #########################################################################
-      pass
-      #########################################################################
-      #                       END OF YOUR CODE                                #
-      #########################################################################
+      self.W -= grad * learning_rate
 
       if verbose and it % 100 == 0:
         print 'iteration %d / %d: loss %f' % (it, num_iters, loss)
