@@ -23,16 +23,37 @@ def softmax_loss_naive(W, X, y, reg):
   loss = 0.0
   dW = np.zeros_like(W)
 
-  #############################################################################
-  # TODO: Compute the softmax loss and its gradient using explicit loops.     #
+  # Compute the softmax loss and its gradient using explicit loops.     #
   # Store the loss in loss and the gradient in dW. If you are not careful     #
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
-  #############################################################################
-  pass
-  #############################################################################
-  #                          END OF YOUR CODE                                 #
-  #############################################################################
+  test_size = X.shape[0]
+
+  for i in xrange(test_size):
+    scores = X[i].dot(W)
+
+    exp_scores = np.exp(scores)
+    norm_exp_scores = exp_scores / np.sum(exp_scores)
+
+    d_norm_exp_scores = -1.0 / norm_exp_scores[y[i]]
+
+    d_exp_score = np.zeros_like(exp_scores)
+    d_exp_score[:] = -(np.sum(exp_scores) ** -2) * exp_scores[y[i]] * d_norm_exp_scores
+    d_exp_score[y[i]] = d_exp_score[y[i]] / exp_scores[y[i]] * (np.sum(exp_scores) - exp_scores[y[i]])
+    
+    d_score = exp_scores * d_exp_score
+    d_score[y[i]] *= -1.0
+
+    loss_i = -np.log(norm_exp_scores[y[i]])
+    loss += loss_i
+
+    dW += X[i].reshape(-1,1).dot(d_score.reshape(1,-1))
+
+  loss /= test_size
+  dW /= test_size
+
+  loss += 0.5 * reg * np.sum(W * W)
+  dW += reg * W
 
   return loss, dW
 
