@@ -68,16 +68,43 @@ def softmax_loss_vectorized(W, X, y, reg):
   loss = 0.0
   dW = np.zeros_like(W)
 
-  #############################################################################
-  # TODO: Compute the softmax loss and its gradient using no explicit loops.  #
+  # Compute the softmax loss and its gradient using no explicit loops.        #
   # Store the loss in loss and the gradient in dW. If you are not careful     #
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
-  #############################################################################
-  pass
-  #############################################################################
-  #                          END OF YOUR CODE                                 #
-  #############################################################################
+
+  scores = X.dot(W)
+  exp_scores = np.exp(scores)
+  
+  sum_exp_scores = np.sum(exp_scores, axis = 1)
+  correct_exp_scores = exp_scores[xrange(exp_scores.shape[0]), y]
+
+  probabilities = correct_exp_scores / sum_exp_scores
+
+  loss_array = - np.log(probabilities)
+
+  loss = np.average(loss_array) + 0.5 * reg * np.sum(W * W)
+
+  d_loss_array = np.zeros_like(loss_array) + (1.0 / loss_array.shape[0])
+  d_probabilities = (- 1.0 / probabilities) * d_loss_array
+
+  d_correct_exp_scores = d_probabilities / sum_exp_scores
+  d_sum_exp_scores = - correct_exp_scores * (sum_exp_scores ** -2) * d_probabilities
+
+  d_exp_scores = np.zeros_like(exp_scores)
+  d_exp_scores += d_sum_exp_scores.reshape(-1,1)
+  d_exp_scores[xrange(exp_scores.shape[0]), y] += d_correct_exp_scores
+
+  d_scores = d_exp_scores * exp_scores
+  dW = X.T.dot(d_scores) + reg * W
+
+  # print d_loss_array
+  # print d_probabilities
+  # print d_correct_exp_scores
+  # print d_sum_exp_scores
+  # print d_exp_scores
+  # print d_scores
+  # print dW
 
   return loss, dW
 
