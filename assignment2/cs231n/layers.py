@@ -20,14 +20,12 @@ def affine_forward(x, w, b):
   - cache: (x, w, b)
   """
   out = None
-  #############################################################################
-  # TODO: Implement the affine forward pass. Store the result in out. You     #
+  # Implement the affine forward pass. Store the result in out. You           #
   # will need to reshape the input into rows.                                 #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  N = x.shape[0]
+  x_reshaped = x.reshape(N, -1)
+  out = x_reshaped.dot(w) + b
+
   cache = (x, w, b)
   return out, cache
 
@@ -49,13 +47,11 @@ def affine_backward(dout, cache):
   """
   x, w, b = cache
   dx, dw, db = None, None, None
-  #############################################################################
-  # TODO: Implement the affine backward pass.                                 #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  # Implement the affine backward pass.                                 #
+  dx = dout.dot(w.T).reshape(x.shape)
+  dw = x.reshape(x.shape[0], -1).T.dot(dout)
+  db = np.sum(dout, axis=0)
+
   return dx, dw, db
 
 
@@ -71,13 +67,9 @@ def relu_forward(x):
   - cache: x
   """
   out = None
-  #############################################################################
-  # TODO: Implement the ReLU forward pass.                                    #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  # Implement the ReLU forward pass.                                    #
+  out = np.maximum(0, x)
+  
   cache = x
   return out, cache
 
@@ -94,13 +86,10 @@ def relu_backward(dout, cache):
   - dx: Gradient with respect to x
   """
   dx, x = None, cache
-  #############################################################################
-  # TODO: Implement the ReLU backward pass.                                   #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  # Implement the ReLU backward pass.                                   #
+
+  dx = dout * (x > 0)
+
   return dx
 
 
@@ -152,8 +141,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
 
   out, cache = None, None
   if mode == 'train':
-    #############################################################################
-    # TODO: Implement the training-time forward pass for batch normalization.   #
+    # Implement the training-time forward pass for batch normalization.         #
     # Use minibatch statistics to compute the mean and variance, use these      #
     # statistics to normalize the incoming data, and scale and shift the        #
     # normalized data using gamma and beta.                                     #
@@ -164,28 +152,49 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # You should also use your computed sample mean and variance together with  #
     # the momentum variable to update the running mean and running variance,    #
     # storing your result in the running_mean and running_var variables.        #
-    #############################################################################
-    pass
-    #############################################################################
-    #                             END OF YOUR CODE                              #
-    #############################################################################
+    cache = {}
+    sample_mean = np.mean(x, axis=0)
+    running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+    delta_x = x - running_mean.reshape(1,-1)
+
+    sqr_delta_x = delta_x ** 2
+    sample_var = np.mean(sqr_delta_x, axis=0)
+    running_var = momentum * running_var + (1 - momentum) * sample_var
+    norm_fraction = (eps + running_var) ** (-0.5)
+    norm_x = delta_x * norm_fraction.reshape(1,-1)
+
+    out = gamma * norm_x + beta
+    cache['x'] = x
+    cache['gamma'] = gamma
+    cache['beta'] = beta
+
+    cache['sample_mean'] = sample_mean
+    cache['running_mean'] = running_mean
+    cache['delta_x'] = delta_x
+    cache['sqr_delta_x'] = sqr_delta_x
+    cache['sample_var'] = sample_var
+    cache['running_var'] = running_var
+    cache['norm_fraction'] = norm_fraction
+    cache['norm_x'] = norm_x
+
+    cache['momentum'] = momentum
+    cache['eps'] = eps
   elif mode == 'test':
-    #############################################################################
-    # TODO: Implement the test-time forward pass for batch normalization. Use   #
+    # Implement the test-time forward pass for batch normalization. Use         #
     # the running mean and variance to normalize the incoming data, then scale  #
     # and shift the normalized data using gamma and beta. Store the result in   #
     # the out variable.                                                         #
-    #############################################################################
-    pass
-    #############################################################################
-    #                             END OF YOUR CODE                              #
-    #############################################################################
+    delta_x = x - running_mean.reshape(1,-1)
+    norm_fraction = (eps + running_var) ** (-0.5)
+    norm_x = delta_x * norm_fraction.reshape(1,-1)
+
+    out = gamma * norm_x + beta
   else:
     raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
 
   # Store the updated running means back into bn_param
-  bn_param['running_mean'] = running_mean
-  bn_param['running_var'] = running_var
+  #bn_param['running_mean'] = running_mean
+  #bn_param['running_var'] = running_var
 
   return out, cache
 
@@ -208,14 +217,23 @@ def batchnorm_backward(dout, cache):
   - dbeta: Gradient with respect to shift parameter beta, of shape (D,)
   """
   dx, dgamma, dbeta = None, None, None
-  #############################################################################
-  # TODO: Implement the backward pass for batch normalization. Store the      #
+  # Implement the backward pass for batch normalization. Store the            #
   # results in the dx, dgamma, and dbeta variables.                           #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  dbeta = np.sum(dout, axis=0)
+  dgamma = np.sum(dout * cache['norm_x'], axis=0)
+  
+  d_norm_x = dout * cache['gamma']
+
+  d_norm_fraction = np.sum(d_norm_x * cache['delta_x'], axis=0)
+  d_running_var = -0.5 * d_norm_fraction * ((cache['running_var'] + cache['eps']) ** (-1.5))
+  d_sample_var = d_running_var * (1 - cache['momentum'])
+  d_sqr_delta_x = d_sample_var * (np.ones_like(cache['sqr_delta_x']) / cache['sqr_delta_x'].shape[0])
+  d_delta_x = 2 * cache['delta_x'] * d_sqr_delta_x + d_norm_x * cache['norm_fraction']
+
+  d_running_mean = - np.sum(d_delta_x, axis=0)
+  d_sample_mean = d_running_mean * (1 - cache['momentum'])
+  dx = d_delta_x + d_sample_mean * (np.ones_like(cache['x']) / cache['x'].shape[0])
+  
 
   return dx, dgamma, dbeta
 
