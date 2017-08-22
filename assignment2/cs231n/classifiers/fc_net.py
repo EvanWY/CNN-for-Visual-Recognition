@@ -185,6 +185,10 @@ class FullyConnectedNet(object):
       
       self.params['W' + str(i+1)] = weight_scale * np.random.randn(in_dim, out_dim)
       self.params['b' + str(i+1)] = np.zeros(out_dim)
+      
+      if use_batchnorm and i != self.num_layers-1:
+        self.params['gamma' + str(i+1)] = np.ones(out_dim)
+        self.params['beta' + str(i+1)] = np.zeros(out_dim)
 
     # When using dropout we need to pass a dropout_param dictionary to each
     # dropout layer so that the layer knows the dropout probability and the mode
@@ -243,7 +247,13 @@ class FullyConnectedNet(object):
       if i == self.num_layers-1:
         X, cache = affine_forward(X, self.params['W' + str(i+1)], self.params['b' + str(i+1)])
       else:
-        X, cache = affine_relu_forward(X, self.params['W' + str(i+1)], self.params['b' + str(i+1)])
+        if self.use_batchnorm:
+          X, cache = affine_batchnorm_relu_forward(X, 
+              self.params['W' + str(i+1)], self.params['b' + str(i+1)],
+              self.params['gamma' + str(i+1)], self.params['beta' + str(i+1)],
+              self.bn_params[i])
+        else:
+          X, cache = affine_relu_forward(X, self.params['W' + str(i+1)], self.params['b' + str(i+1)])
       caches.append(cache)
 
     scores = X
@@ -269,14 +279,26 @@ class FullyConnectedNet(object):
     reg = self.reg
 
     for i in xrange(self.num_layers):
+      dgamma = None
+      dbeta = None
       layerIdx = self.num_layers - i - 1
       loss += 0.5*reg* np.sum(self.params['W' + str(layerIdx+1)] ** 2)
       if i == 0:
         dx, dw, db = affine_backward(dx, caches[layerIdx])
       else:
-        dx, dw, db = affine_relu_backward(dx, caches[layerIdx])
+        if self.use_batchnorm:
+          dx, dw, db, dgamma, dbeta = affine_batchnorm_relu_backward(dx, caches[layerIdx])
+        else:
+          dx, dw, db = affine_relu_backward(dx, caches[layerIdx])
+      
       dw += reg * self.params['W' + str(layerIdx+1)]
+      
       grads['W' + str(layerIdx + 1)] = dw
       grads['b' + str(layerIdx + 1)] = db
+      if self.use_batchnorm:
+        if dgamma is not None:
+          grads['gamma' + str(layerIdx + 1)] = dgamma
+        if dbeta is not None:
+          grads['beta' + str(layerIdx + 1)] = dbeta
 
     return loss, grads
