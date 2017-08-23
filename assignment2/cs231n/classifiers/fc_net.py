@@ -228,7 +228,7 @@ class FullyConnectedNet(object):
       self.dropout_param['mode'] = mode   
     if self.use_batchnorm:
       for bn_param in self.bn_params:
-        bn_param[mode] = mode
+        bn_param['mode'] = mode
 
     scores = None
     # Implement the forward pass for the fully-connected net, computing        #
@@ -251,9 +251,12 @@ class FullyConnectedNet(object):
           X, cache = affine_batchnorm_relu_forward(X, 
               self.params['W' + str(i+1)], self.params['b' + str(i+1)],
               self.params['gamma' + str(i+1)], self.params['beta' + str(i+1)],
-              self.bn_params[i])
+              self.bn_params[i], self.dropout_param if self.use_dropout else None)
         else:
-          X, cache = affine_relu_forward(X, self.params['W' + str(i+1)], self.params['b' + str(i+1)])
+          X, cache = affine_relu_forward(X, self.params['W' + str(i+1)], self.params['b' + str(i+1)],
+            self.dropout_param if self.use_dropout else None)
+
+        
       caches.append(cache)
 
     scores = X
