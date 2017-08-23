@@ -133,7 +133,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
   """
   mode = bn_param['mode']
   eps = bn_param.get('eps', 1e-5)
-  momentum = bn_param.get('momentum', 0.9)
+  momentum = bn_param.get('momentum', 0.4)
 
   N, D = x.shape
   running_mean = bn_param.get('running_mean', np.zeros(D, dtype=x.dtype))
@@ -184,17 +184,30 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # the running mean and variance to normalize the incoming data, then scale  #
     # and shift the normalized data using gamma and beta. Store the result in   #
     # the out variable.                                                         #
-    delta_x = x - running_mean.reshape(1,-1)
-    norm_fraction = (eps + running_var) ** (-0.5)
+    # delta_x = x - running_mean.reshape(1,-1)
+    # norm_fraction = (eps + running_var) ** (-0.5)
+    # norm_x = delta_x * norm_fraction.reshape(1,-1)
+
+    # out = gamma * norm_x + beta
+
+    sample_mean = np.mean(x, axis=0)
+    temp_running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+    delta_x = x - temp_running_mean.reshape(1,-1)
+
+    sqr_delta_x = delta_x ** 2
+    sample_var = np.mean(sqr_delta_x, axis=0)
+    temp_running_var = momentum * running_var + (1 - momentum) * sample_var
+    norm_fraction = (eps + temp_running_var) ** (-0.5)
     norm_x = delta_x * norm_fraction.reshape(1,-1)
 
     out = gamma * norm_x + beta
+
   else:
     raise ValueError('Invalid forward batchnorm mode "%s"' % mode)
 
   # Store the updated running means back into bn_param
-  #bn_param['running_mean'] = running_mean
-  #bn_param['running_var'] = running_var
+  bn_param['running_mean'] = running_mean
+  bn_param['running_var'] = running_var
 
   return out, cache
 
