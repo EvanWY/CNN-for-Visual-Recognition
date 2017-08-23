@@ -366,14 +366,34 @@ def conv_forward_naive(x, w, b, conv_param):
   - cache: (x, w, b, conv_param)
   """
   out = None
-  #############################################################################
-  # TODO: Implement the convolutional forward pass.                           #
+  # Implement the convolutional forward pass.                                 #
   # Hint: you can use the function np.pad for padding.                        #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  pad = conv_param['pad']
+  stride = conv_param['stride']
+  N, C, H, W = x.shape
+  F, _, HH, WW = w.shape
+  H2 = 1 + (H + 2 * pad - HH) / stride
+  W2 = 1 + (W + 2 * pad - WW) / stride
+  out = np.zeros([N, F, H2, W2])
+  padded_x = np.lib.pad(x, ((0,0), (0,0), (pad, pad), (pad, pad)), 'constant', constant_values=((0,0), (0,0), (0,0), (0,0)))
+
+  for img_idx in xrange(N):
+    for filter_idx in xrange(F):
+      center_h = pad
+      for h2 in xrange(H2):
+        center_w = pad
+        for w2 in xrange(W2):
+          # filter from to
+          h_min = center_h - HH//2 + (0 if HH%2==1 else 1)
+          h_max = center_h + HH//2 + 1
+          w_min = center_w - WW//2 + (0 if HH%2==1 else 1)
+          w_max = center_w + WW//2 + 1
+
+          x_area = padded_x[img_idx, :, h_min:h_max, w_min:w_max]
+          out[img_idx, filter_idx, h2, w2] = np.sum(x_area * w[filter_idx]) + b[filter_idx]
+          center_w += stride
+        center_h += stride
+
   cache = (x, w, b, conv_param)
   return out, cache
 
@@ -392,13 +412,46 @@ def conv_backward_naive(dout, cache):
   - db: Gradient with respect to b
   """
   dx, dw, db = None, None, None
-  #############################################################################
-  # TODO: Implement the convolutional backward pass.                          #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  
+  # Implement the convolutional backward pass.                                #
+  x, w, b, conv_param = cache
+
+  pad = conv_param['pad']
+  stride = conv_param['stride']
+  N, C, H, W = x.shape
+  F, _, HH, WW = w.shape
+  H2 = 1 + (H + 2 * pad - HH) / stride
+  W2 = 1 + (W + 2 * pad - WW) / stride
+
+  padded_x = np.lib.pad(x, ((0,0), (0,0), (pad, pad), (pad, pad)), 'constant', constant_values=((0,0), (0,0), (0,0), (0,0)))
+  d_padded_x = np.zeros_like(padded_x)
+
+  dw = np.zeros_like(w)
+  db = np.zeros_like(b)
+    
+  for img_idx in xrange(N):
+    for filter_idx in xrange(F):
+      center_h = pad
+      for h2 in xrange(H2):
+        center_w = pad
+        for w2 in xrange(W2):
+          # filter from to
+          h_min = center_h - HH//2 + (0 if HH%2==1 else 1)
+          h_max = center_h + HH//2 + 1
+          w_min = center_w - WW//2 + (0 if HH%2==1 else 1)
+          w_max = center_w + WW//2 + 1
+
+          dout_here = dout[img_idx, filter_idx, h2, w2]
+
+          db[filter_idx] += dout_here
+          d_padded_x[img_idx, :, h_min:h_max, w_min:w_max] += dout_here * w[filter_idx]
+          dw[filter_idx] += dout_here * padded_x[img_idx, :, h_min:h_max, w_min:w_max]
+
+          center_w += stride
+        center_h += stride
+
+  dx = d_padded_x[:, :, pad:-pad, pad:-pad]
+
   return dx, dw, db
 
 
