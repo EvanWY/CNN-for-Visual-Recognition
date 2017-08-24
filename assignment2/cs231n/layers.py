@@ -471,13 +471,31 @@ def max_pool_forward_naive(x, pool_param):
   - cache: (x, pool_param)
   """
   out = None
-  #############################################################################
-  # TODO: Implement the max pooling forward pass                              #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  # Implement the max pooling forward pass                                    #
+  N, C, H, W = x.shape
+  stride = pool_param['stride']
+  H2 = H // stride
+  W2 = W // stride
+
+  out = np.zeros([N, C, H2, W2])
+    
+  for img_idx in xrange(N):
+    for channel_idx in xrange(C):
+      center_h = 0
+      for h2 in xrange(H2):
+        center_w = 0
+        for w2 in xrange(W2):
+          # filter from to
+          h_min = center_h - stride//2 + (0 if stride%2==1 else 1)
+          h_max = center_h + stride//2 + 1
+          w_min = center_w - stride//2 + (0 if stride%2==1 else 1)
+          w_max = center_w + stride//2 + 1
+
+          out[img_idx, channel_idx, h2, w2] = np.amax(x[img_idx, channel_idx, h_min:h_max, w_min:w_max])
+
+          center_w += stride
+        center_h += stride
+
   cache = (x, pool_param)
   return out, cache
 
@@ -494,13 +512,34 @@ def max_pool_backward_naive(dout, cache):
   - dx: Gradient with respect to x
   """
   dx = None
-  #############################################################################
-  # TODO: Implement the max pooling backward pass                             #
-  #############################################################################
-  pass
-  #############################################################################
-  #                             END OF YOUR CODE                              #
-  #############################################################################
+  # Implement the max pooling backward pass    #
+  x, pool_param = cache                         
+  N, C, H, W = x.shape
+  stride = pool_param['stride']
+  H2 = H // stride
+  W2 = W // stride
+  dx = np.zeros_like(x)
+
+  for img_idx in xrange(N):
+    for channel_idx in xrange(C):
+      center_h = 0
+      for h2 in xrange(H2):
+        center_w = 0
+        for w2 in xrange(W2):
+          # filter from to
+          h_min = center_h - stride//2 + (0 if stride%2==1 else 1)
+          h_max = center_h + stride//2 + 1
+          w_min = center_w - stride//2 + (0 if stride%2==1 else 1)
+          w_max = center_w + stride//2 + 1
+
+          area_x = x[img_idx, channel_idx, h_min:h_max, w_min:w_max]
+          maxidx_flat = np.argmax(area_x)
+          maxidx = np.unravel_index(maxidx_flat, area_x.shape)
+          dx[img_idx, channel_idx, h_min:h_max, w_min:w_max][maxidx] = dout[img_idx, channel_idx, h2, w2]
+
+          center_w += stride
+        center_h += stride
+
   return dx
 
 
