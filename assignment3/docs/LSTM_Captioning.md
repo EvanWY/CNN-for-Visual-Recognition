@@ -1,6 +1,17 @@
 
 # Image Captioning with LSTMs
-In the previous exercise you implemented a vanilla RNN and applied it to image captioning. In this notebook you will implement the LSTM update rule and use it for image captioning.
+
+![png](output_22_9.png)
+```
+
+            "A close up of plates of food"
+
+                                      - by LSTM
+                            
+```
+
+---
+In this project, I implemented the LSTM update rule and use it for image captioning.
 
 
 ```python
